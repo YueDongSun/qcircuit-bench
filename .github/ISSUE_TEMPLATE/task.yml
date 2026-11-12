@@ -1,0 +1,27 @@
+name: Task
+description: Engineering work to add or change a benchmark task
+title: "feat(task): "
+labels:
+  - task
+body:
+  - type: textarea
+    id: spec
+    attributes:
+      label: Spec reference
+      description: Exact spec/ heading this task implements. Stop and open a science-decision issue if that heading is still TODO(owner).
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Files in scope
+      description: Paths this branch may edit. spec/ and data/gold/ are not allowed.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Include make validate for the new task id.
+    validations:
+      required: true

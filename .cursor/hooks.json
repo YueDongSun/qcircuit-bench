@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "python3 -m tools.hooks.shell_guard",
+        "failClosed": true
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "python3 -m tools.hooks.file_guard",
+        "failClosed": true
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "python3 -m tools.hooks.file_guard",
+        "failClosed": true
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "python3 -m tools.hooks.format_file"
+      }
+    ],
+    "stop": [
+      {
+        "command": "python3 -m tools.hooks.stop_check",
+        "loop_limit": 2
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+name: Science decision
+description: Ask the owner to decide a point that spec/ does not state
+title: "science: "
+labels:
+  - needs-science-decision
+body:
+  - type: textarea
+    id: line
+    attributes:
+      label: Spec line
+      description: Exact spec/ path and the quoted heading or sentence.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options
+      description: Concrete options. Do not pick one in code before the owner decides.
+    validations:
+      required: true
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Work stopped
+      description: What you stopped doing while this is open.
+    validations:
+      required: true

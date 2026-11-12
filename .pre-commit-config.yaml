@@ -1,0 +1,64 @@
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        name: check added large files
+        args: ["--maxkb=500"]
+        exclude: ^data/gold/
+      - id: check-added-large-files
+        name: check added large files in data/gold
+        args: ["--maxkb=5120"]
+        files: ^data/gold/
+      - id: no-commit-to-branch
+        args: ["--branch=main"]
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy src
+        language: system
+        pass_filenames: false
+        files: ^src/
+      - id: nbstripout
+        name: nbstripout
+        entry: uv run nbstripout
+        language: system
+        types: [jupyter]
+      - id: check-spec-untouched
+        name: check spec untouched
+        entry: python3 -m tools.check_spec_untouched
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: conventional-commit
+        name: conventional commit
+        entry: python3 -m tools.check_commit_msg
+        language: system
+        stages: [commit-msg]
+        always_run: true
+      - id: pre-push-check
+        name: pre-push make check and refuse main
+        entry: python3 -m tools.pre_push
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

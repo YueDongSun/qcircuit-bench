@@ -1,0 +1,19 @@
+---
+description: qcircuit-bench agent contract
+alwaysApply: true
+---
+
+# qcircuit-bench
+
+Read AGENTS.md. `spec/` and `data/gold/` are owner-only. Never edit them and
+never set `OWNER_SPEC_EDIT`. If a scientific point is missing, open a
+`needs-science-decision` issue quoting the spec line and stop. Do not invent
+conventions, tolerances, endianness, or resource-accounting rules.
+
+`example-000-smoke` is a format demo. Its `task.toml` numbers are not bench
+science.
+
+Use `uv add`, not `pip install`. Commit with a Conventional Commit scope from
+`task`, `verify`, `reference`, `taskfmt`, `tooling`, `docs`, `ci`, `deps`,
+`spec`. Do not force-push, push to `main`, or skip hooks. `make check` must
+pass. One issue, one branch, one PR. Do not merge.
