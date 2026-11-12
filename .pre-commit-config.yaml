@@ -53,7 +53,7 @@ repos:
         always_run: true
       - id: pre-push-check
         name: make check and refuse a push from main
-        entry: python3 tools/pre_push.py
+        entry: python3 -m tools.pre_push
         language: system
         stages: [pre-push]
         always_run: true

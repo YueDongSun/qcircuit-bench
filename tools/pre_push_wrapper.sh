@@ -7,9 +7,11 @@ hook_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 root=$(CDPATH= cd -- "$hook_dir/../.." && pwd)
 tmp=$(mktemp)
 cat > "$tmp"
-python3 "$root/tools/pre_push.py" --refs-only < "$tmp" || {
+cd "$root" || exit 1
+python3 -m tools.pre_push --refs-only < "$tmp" || {
+  status=$?
   rm -f "$tmp"
-  exit 1
+  exit "$status"
 }
 rm -f "$tmp"
 exec "$hook_dir/pre-push.pre-commit"

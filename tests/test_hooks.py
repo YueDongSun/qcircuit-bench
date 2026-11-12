@@ -284,6 +284,30 @@ def test_staged_source_is_allowed(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert spec_main(tmp_path) == 0
 
 
+def test_pre_push_module_refuses_main() -> None:
+    sha = "0" * 40
+    line = f"refs/heads/cursor/m0_scaffold {sha} refs/heads/main {sha}\n"
+    proc = subprocess.run(
+        [sys.executable, "-m", "tools.pre_push", "--refs-only"],
+        input=line,
+        text=True,
+        capture_output=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert proc.returncode == 1
+    assert "refusing push to main" in proc.stderr
+    allowed = subprocess.run(
+        [sys.executable, "-m", "tools.pre_push", "--refs-only"],
+        input=f"refs/heads/cursor/m0_scaffold {sha} refs/heads/cursor/m0_scaffold {sha}\n",
+        text=True,
+        capture_output=True,
+        cwd=ROOT,
+        check=False,
+    )
+    assert allowed.returncode == 0
+
+
 def test_push_ref_rules() -> None:
     line = "refs/heads/cursor/m0_scaffold abc refs/heads/main def"
     assert push_targets_main(line, "cursor/m0_scaffold")

@@ -11,8 +11,13 @@ MARKER = "# qcbench-pre-push-guard"
 
 
 def hooks_dir() -> Path:
+    """Return ``<git-common-dir>/hooks``, where pre-commit writes its scripts.
+
+    ``git rev-parse --git-path hooks`` follows ``core.hooksPath`` and is not
+    the directory pre-commit installs into.
+    """
     completed = subprocess.run(
-        ["git", "rev-parse", "--git-path", "hooks"],
+        ["git", "rev-parse", "--git-common-dir"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -21,7 +26,7 @@ def hooks_dir() -> Path:
     path = Path(completed.stdout.strip())
     if not path.is_absolute():
         path = REPO_ROOT / path
-    return path
+    return path / "hooks"
 
 
 def install_pre_commit() -> None:
@@ -48,11 +53,10 @@ def wrap_pre_push(hooks: Path) -> None:
     pre_push = hooks / "pre-push"
     chained = hooks / "pre-push.pre-commit"
     text = pre_push.read_text(encoding="utf-8")
-    if MARKER in text.splitlines()[:3]:
-        return
-    chained.write_text(text, encoding="utf-8")
-    chained.chmod(chained.stat().st_mode | stat.S_IEXEC)
     wrapper = (REPO_ROOT / "tools" / "pre_push_wrapper.sh").read_text(encoding="utf-8")
+    if MARKER not in text.splitlines()[:3]:
+        chained.write_text(text, encoding="utf-8")
+        chained.chmod(chained.stat().st_mode | stat.S_IEXEC)
     pre_push.write_text(wrapper, encoding="utf-8")
     pre_push.chmod(pre_push.stat().st_mode | stat.S_IEXEC)
 
