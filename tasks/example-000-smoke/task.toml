@@ -1,0 +1,18 @@
+id = "example-000-smoke"
+family = "example"
+difficulty = "demo"
+spec_reference = "spec/TASKS.md#Task families (state preparation, unitary synthesis under a gate set/topology, resource-constrained optimisation)"
+author = "m0-scaffold"
+status = "ready"
+format_demo = true
+
+[timeouts]
+agent_sec = 60
+verifier_sec = 60
+
+# FORMAT DEMO wiring. Not spec/TOLERANCES.md and not a bench convention.
+[format_demo_limits]
+min_state_fidelity = 1.0
+max_gate_count = 6
+max_depth = 6
+max_two_qubit_count = 1
