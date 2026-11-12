@@ -1,13 +1,7 @@
 """Claude Code PreToolUse hook for Bash and file edits."""
 
 from tools.hooks.common import branch_for_cwd, emit, field_str, read_event, repo_root
-from tools.hooks.policy import (
-    OWNER_ONLY_MESSAGE,
-    claude_pre_tool_payload,
-    is_owner_only_path,
-    paths_from_tool_input,
-    shell_denial,
-)
+from tools.hooks.policy import claude_pre_tool_payload, file_edit_denial, shell_denial
 
 
 def main() -> int:
@@ -29,11 +23,10 @@ def main() -> int:
             return 0
         emit(claude_pre_tool_payload("deny", denial))
         return 0
-    if tool in {"Edit", "Write", "MultiEdit"}:
-        for path in paths_from_tool_input(tool_input):
-            if is_owner_only_path(path, repo_root=root):
-                emit(claude_pre_tool_payload("deny", OWNER_ONLY_MESSAGE))
-                return 0
+    denial = file_edit_denial(tool, tool_input, repo_root=root)
+    if denial is not None:
+        emit(claude_pre_tool_payload("deny", denial))
+        return 0
     emit(claude_pre_tool_payload("allow", ""))
     return 0
 

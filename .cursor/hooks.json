@@ -1,6 +1,13 @@
 {
   "version": 1,
   "hooks": {
+    "preToolUse": [
+      {
+        "command": "python3 -m tools.hooks.cursor_pre_tool",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ],
     "beforeShellExecution": [
       {
         "command": "python3 -m tools.hooks.cursor_before_shell",

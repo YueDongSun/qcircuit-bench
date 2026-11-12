@@ -141,6 +141,31 @@ def test_cursor_before_read_allows_spec() -> None:
     assert read_permission(str(ROOT / "spec" / "SCIENCE.md"), repo_root=ROOT) == "allow"
 
 
+def test_cursor_pre_tool_denies_spec_write_before_edit() -> None:
+    target = ROOT / "spec" / "SCIENCE.md"
+    before = target.read_bytes()
+    proc = _run_module(
+        "tools.hooks.cursor_pre_tool",
+        {
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(target), "contents": "changed"},
+        },
+    )
+    assert proc.returncode == 0
+    body = json.loads(proc.stdout)
+    assert body["permission"] == "deny"
+    assert "needs-science-decision" in body["agent_message"]
+    assert target.read_bytes() == before
+    allowed = _run_module(
+        "tools.hooks.cursor_pre_tool",
+        {
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(ROOT / "src" / "qcbench" / "__init__.py")},
+        },
+    )
+    assert json.loads(allowed.stdout)["permission"] == "allow"
+
+
 def test_cursor_after_edit_denies_spec_without_changing_it() -> None:
     target = ROOT / "spec" / "SCIENCE.md"
     before = target.read_bytes()
@@ -272,6 +297,30 @@ def test_staged_spec_is_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert spec_main(tmp_path) == 1
     monkeypatch.setenv("OWNER_SPEC_EDIT", "1")
     assert spec_main(tmp_path) == 0
+
+
+def test_staged_rename_out_of_spec_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _git(tmp_path, "init", "-b", "main")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    _git(tmp_path, "config", "user.name", "test")
+    spec = tmp_path / "spec"
+    spec.mkdir()
+    (spec / "SCIENCE.md").write_text("# Scope\n\nTODO(owner)\n", encoding="utf-8")
+    _git(tmp_path, "add", "spec/SCIENCE.md")
+    _git(
+        tmp_path,
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "chore(tooling): seed spec",
+    )
+    _git(tmp_path, "mv", "spec/SCIENCE.md", "moved_science.md")
+    monkeypatch.delenv("OWNER_SPEC_EDIT", raising=False)
+    assert spec_main(tmp_path) == 1
 
 
 def test_staged_source_is_allowed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

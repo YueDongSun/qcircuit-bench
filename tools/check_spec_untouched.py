@@ -16,9 +16,21 @@ def repo_root() -> Path:
 
 
 def staged_paths(cwd: Path) -> list[str]:
-    """Return paths staged for commit. Exit if git cannot answer."""
+    """Return every path in the staged diff, including both sides of a rename.
+
+    ``--name-only`` keeps only the destination of a rename, so moving
+    ``spec/SCIENCE.md`` out of ``spec/`` would look unprotected. Exit if git
+    cannot answer.
+    """
     completed = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMRD"],
+        [
+            "git",
+            "diff",
+            "--cached",
+            "--name-status",
+            "--find-renames",
+            "--diff-filter=ACMRD",
+        ],
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -27,7 +39,11 @@ def staged_paths(cwd: Path) -> list[str]:
     if completed.returncode != 0:
         detail = completed.stderr.strip() or "git diff --cached failed"
         raise SystemExit(detail)
-    return [line for line in completed.stdout.splitlines() if line]
+    paths: list[str] = []
+    for line in completed.stdout.splitlines():
+        fields = line.split("\t")
+        paths.extend(field for field in fields[1:] if field)
+    return paths
 
 
 def owner_only_relative(path: str) -> bool:

@@ -10,6 +10,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+  "hatchling==1.33.0",
   "mypy==2.4.1",
   "nbstripout==0.9.1",
   "pre-commit==4.7.0",
@@ -18,7 +19,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [tool.uv]

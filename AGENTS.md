@@ -111,10 +111,11 @@ Cursor (`.cursor/hooks.json`) and Claude Code (`.claude/settings.json`) deny:
 - any command that sets `OWNER_SPEC_EDIT`
 - `pip install` (add dependencies with `uv add`; `uv pip install` is allowed)
 
-Edits under `spec/` or `data/gold/` are denied. The message points at the
+Edits under `spec/` or `data/gold/` are denied before the write: Cursor
+`preToolUse` and Claude Code `PreToolUse`. The message points at the
 `needs-science-decision` issue flow. Reads of `spec/` stay allowed so an agent
-can quote a line. After a Python edit, the hook runs `ruff format` on that
-file. The stop hook runs `make check` and, on failure, tells the agent to keep
+can quote a line. `afterFileEdit` repeats that denial if an owner-only edit is
+already on disk, and it runs `ruff format` on other Python files. The stop hook runs `make check` and, on failure, tells the agent to keep
 working.
 
 ## Branches and pull requests

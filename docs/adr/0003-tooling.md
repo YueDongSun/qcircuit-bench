@@ -18,7 +18,8 @@ Python is 3.12 or newer. `uv` manages the environment. `uv.lock` is committed.
 Direct runtime dependencies are empty in M0: no numerical routine is specified
 yet, so numpy, scipy, Qiskit, and Cirq are not added. Dev tools are pinned in
 `pyproject.toml` and in the lockfile: ruff 0.17.4, mypy 2.4.1, pytest 9.2.0,
-pre-commit 4.7.0, nbstripout 0.9.1.
+pre-commit 4.7.0, nbstripout 0.9.1. The build backend is `hatchling==1.33.0`, also listed in the dev group so
+`uv.lock` records that wheel.
 
 `make setup` runs `uv sync --all-groups --frozen` and
 `tools/install_git_hooks.py`. `make check` runs, in order, `fmt-check`,
@@ -42,8 +43,8 @@ Git hooks, installed by pre-commit:
   pre-push hook so a push whose remote ref is `refs/heads/main` is refused
   before `make check`. pre-commit itself does not forward that ref list.
 
-`tools/check_spec_untouched.py` looks at `git diff --cached`, not at every
-file on disk. A later `pre-commit run --all-files` therefore does not fail
+`tools/check_spec_untouched.py` looks at `git diff --cached --name-status`,
+including both sides of a rename, not at every file on disk. A later `pre-commit run --all-files` therefore does not fail
 just because the M0 skeleton exists. Creating that skeleton is part of M0.
 After the hooks are installed, an agent commit that stages `spec/` or
 `data/gold/` is rejected. The owner bypass is the environment variable
@@ -51,7 +52,9 @@ After the hooks are installed, an agent commit that stages `spec/` or
 
 Cursor and Claude Code call the scripts in `tools/hooks/`. Policy functions
 live in `tools/hooks/policy.py` so the two agents cannot drift. Denied shell
-commands and owner-only edits are listed in `AGENTS.md`. The stop hook runs
+commands and owner-only edits are listed in `AGENTS.md`. Cursor `preToolUse`
+denies an owner-only write before the file changes. `afterFileEdit` formats
+Python and repeats that denial if the edit is already on disk. The stop hook runs
 `make check`. On failure, Cursor receives `followup_message` and Claude Code
 receives `decision: block`. Cursor's stop hook sets `loop_limit` to 5 so a
 failing check cannot loop forever. An aborted Cursor turn does not run the

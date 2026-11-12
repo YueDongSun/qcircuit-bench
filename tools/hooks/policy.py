@@ -128,6 +128,34 @@ def claude_pre_tool_payload(decision: str, reason: str) -> dict[str, object]:
     return {"hookSpecificOutput": specific}
 
 
+FILE_EDIT_TOOLS = frozenset(
+    {
+        "ApplyPatch",
+        "Delete",
+        "Edit",
+        "MultiEdit",
+        "NotebookEdit",
+        "StrReplace",
+        "Write",
+    }
+)
+
+
+def file_edit_denial(
+    tool_name: str,
+    tool_input: dict[str, object],
+    *,
+    repo_root: Path,
+) -> str | None:
+    """Return the owner-only denial when a file-edit tool targets spec or gold."""
+    if tool_name not in FILE_EDIT_TOOLS:
+        return None
+    for path in paths_from_tool_input(tool_input):
+        if is_owner_only_path(path, repo_root=repo_root):
+            return OWNER_ONLY_MESSAGE
+    return None
+
+
 def paths_from_tool_input(tool_input: dict[str, object]) -> list[str]:
     """Collect file paths from an Edit, Write, or MultiEdit payload."""
     found: list[str] = []
