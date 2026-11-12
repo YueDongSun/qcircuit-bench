@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools.check_spec_untouched import staged_owner_paths
+from tools.check_spec_untouched import _changed_paths, staged_owner_paths
 from tools.hooks.policy import (
     OWNER_SPEC_MESSAGE,
     CmdResult,
@@ -240,6 +240,26 @@ def test_staged_spec_is_rejected(tmp_path: Path) -> None:
     assert "needs-science-decision" in completed.stderr
 
 
+def test_rename_record_keeps_both_paths() -> None:
+    payload = b"R100\0spec/SCIENCE.md\0docs/SCIENCE.md\0M\0src/a.py\0"
+    assert _changed_paths(payload) == ["spec/SCIENCE.md", "docs/SCIENCE.md", "src/a.py"]
+
+
+def test_rename_out_of_spec_is_rejected(tmp_path: Path) -> None:
+    _git_init(tmp_path)
+    _git(tmp_path, "config", "user.email", "owner@example.com")
+    _git(tmp_path, "config", "user.name", "Owner")
+    spec = tmp_path / "spec"
+    spec.mkdir()
+    text = "# Science\n\n## Scope\n\nTODO(owner)\n"
+    (spec / "SCIENCE.md").write_text(text, encoding="utf-8")
+    _git(tmp_path, "add", "spec/SCIENCE.md")
+    _git(tmp_path, "commit", "-m", "chore(tooling): add spec skeleton")
+    (tmp_path / "docs").mkdir()
+    _git(tmp_path, "mv", "spec/SCIENCE.md", "docs/SCIENCE.md")
+    assert "spec/SCIENCE.md" in staged_owner_paths(tmp_path)
+
+
 def test_staged_source_is_allowed(tmp_path: Path) -> None:
     _git_init(tmp_path)
     source = tmp_path / "src"
@@ -262,3 +282,7 @@ def _run_hook(module: str, payload: str) -> subprocess.CompletedProcess[str]:
 
 def _git_init(path: Path) -> None:
     subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
+
+
+def _git(path: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=path, check=True, capture_output=True)

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import stat
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,6 +31,22 @@ def test_smoke_task_loads() -> None:
     assert task.format_demo_limits is not None
     assert task.timeouts.agent_sec > 0
     check_layout(ROOT / "tasks" / "example-000-smoke", ROOT)
+
+
+def test_local_runner_script_imports_without_pythonpath() -> None:
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "run_task_locally.py"), "missing-000-nope"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 1
+    assert "No module named" not in completed.stderr
+    assert "no task directory" in completed.stderr
 
 
 def test_missing_field_raises(tmp_path: Path) -> None:

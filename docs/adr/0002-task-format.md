@@ -26,7 +26,9 @@ Task ids match `<family>-<nnn>-<slug>`.
 The agent writes OpenQASM 2.0 to the path in `QCBENCH_CIRCUIT_PATH`.
 `make validate` checks the file layout, runs `solution/solve.sh` then
 `tests/test_outputs.py`, and runs the tests again with no solution. The empty
-run must fail.
+run must fail. `agent_sec` bounds the solution and `verifier_sec` bounds the
+verifier, both in seconds. On expiry the process group is killed and
+validation fails.
 
 `example-000-smoke` is a format demo: prepare `(|00> + |11>) / sqrt(2)`.
 Its numeric floors live in that task's `[format_demo_limits]` table because

@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from qcbench.taskfmt.layout import check_layout
-from qcbench.taskfmt.schema import TaskFormatError
+from qcbench.taskfmt.schema import TaskFormatError, load_task
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,11 +27,16 @@ def task_dirs(root: Path) -> list[Path]:
 
 
 def run_solution_and_tests(task_dir: Path) -> None:
-    """Run ``solution/solve.sh`` and require ``tests/test_outputs.py`` to pass."""
+    """Run ``solution/solve.sh`` and require ``tests/test_outputs.py`` to pass.
+
+    ``[timeouts].agent_sec`` bounds the solution. ``verifier_sec`` bounds pytest.
+    Both are seconds from ``task.toml``.
+    """
+    timeouts = load_task(task_dir / "task.toml").timeouts
     with tempfile.TemporaryDirectory() as tmp:
         circuit = Path(tmp) / "circuit.qasm"
-        _run_solution(task_dir, circuit)
-        completed = _pytest(task_dir, circuit)
+        _run_solution(task_dir, circuit, timeout_sec=timeouts.agent_sec)
+        completed = _pytest(task_dir, circuit, timeout_sec=timeouts.verifier_sec)
         if completed.returncode != 0:
             raise ValidationError(
                 f"{task_dir.name}: solution failed tests (exit {completed.returncode})\n"
@@ -40,9 +46,10 @@ def run_solution_and_tests(task_dir: Path) -> None:
 
 def require_empty_solution_fails(task_dir: Path) -> None:
     """Require the verifier to fail when no circuit file exists."""
+    timeouts = load_task(task_dir / "task.toml").timeouts
     with tempfile.TemporaryDirectory() as tmp:
         circuit = Path(tmp) / "circuit.qasm"
-        completed = _pytest(task_dir, circuit)
+        completed = _pytest(task_dir, circuit, timeout_sec=timeouts.verifier_sec)
         if completed.returncode == 0:
             raise ValidationError(
                 f"{task_dir.name}: empty solution passed (vacuous verifier)\n"
@@ -67,33 +74,75 @@ def validate_all(root: Path) -> list[str]:
     return lines
 
 
-def _run_solution(task_dir: Path, circuit: Path) -> None:
+def _run_solution(task_dir: Path, circuit: Path, *, timeout_sec: int) -> None:
     env = os.environ.copy()
     env["QCBENCH_CIRCUIT_PATH"] = str(circuit)
-    completed = subprocess.run(
+    completed = _run(
         ["sh", "solution/solve.sh"],
         cwd=task_dir,
         env=env,
-        check=False,
+        timeout_sec=timeout_sec,
+        label=f"{task_dir.name}: solution",
     )
     if completed.returncode != 0:
-        raise ValidationError(f"{task_dir.name}: solution exited {completed.returncode}")
+        raise ValidationError(
+            f"{task_dir.name}: solution exited {completed.returncode}\n"
+            f"{completed.stdout}\n{completed.stderr}"
+        )
     if not circuit.is_file():
         raise ValidationError(f"{task_dir.name}: solution did not write {circuit}")
 
 
-def _pytest(task_dir: Path, circuit: Path) -> subprocess.CompletedProcess[str]:
+def _pytest(task_dir: Path, circuit: Path, *, timeout_sec: int) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["QCBENCH_CIRCUIT_PATH"] = str(circuit)
     test_file = task_dir / "tests" / "test_outputs.py"
-    return subprocess.run(
+    return _run(
         [sys.executable, "-m", "pytest", str(test_file), "-q"],
         cwd=task_dir,
         env=env,
-        check=False,
-        capture_output=True,
+        timeout_sec=timeout_sec,
+        label=f"{task_dir.name}: verifier",
+    )
+
+
+def _run(
+    args: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    timeout_sec: int,
+    label: str,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``args`` in its own session and kill the group when ``timeout_sec`` elapses."""
+    process = subprocess.Popen(
+        args,
+        cwd=cwd,
+        env=env,
+        start_new_session=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
     )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        _kill_group(process.pid)
+        stdout, stderr = process.communicate()
+        raise ValidationError(
+            f"{label} timed out after {timeout_sec}s\n{stdout or ''}\n{stderr or ''}"
+        ) from None
+    returncode = process.returncode
+    if returncode is None:
+        raise ValidationError(f"{label} exited without a return code")
+    return subprocess.CompletedProcess(args, returncode, stdout or "", stderr or "")
+
+
+def _kill_group(pid: int) -> None:
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
 
 
 def main() -> int:
