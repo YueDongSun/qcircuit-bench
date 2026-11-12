@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "python3 -m tools.hooks.cursor_pre_tool",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "python3 -m tools.hooks.cursor_before_shell",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "python3 -m tools.hooks.cursor_before_read",
+        "failClosed": true,
+        "timeout": 30
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "python3 -m tools.hooks.cursor_after_edit",
+        "timeout": 60
+      }
+    ],
+    "stop": [
+      {
+        "command": "python3 -m tools.hooks.cursor_stop",
+        "loop_limit": 5,
+        "timeout": 900
+      }
+    ]
+  }
+}

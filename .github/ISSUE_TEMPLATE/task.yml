@@ -1,0 +1,36 @@
+name: Task
+description: Engineering work to add or change a benchmark task.
+title: "task: "
+labels:
+  - task
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task id
+      description: "<family>_<nnn>_<slug> in snake_case."
+      placeholder: example_000_smoke
+    validations:
+      required: true
+  - type: input
+    id: spec_reference
+    attributes:
+      label: Spec reference
+      description: Exact spec/...#anchor lines the task implements.
+      placeholder: spec/TASKS.md#task-families
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: File scope
+      description: Paths this issue may change. spec/ and data/gold/ are out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Include make validate behaviour for the new task.
+    validations:
+      required: true

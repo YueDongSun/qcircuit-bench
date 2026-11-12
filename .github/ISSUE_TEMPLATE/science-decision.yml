@@ -1,0 +1,27 @@
+name: Science decision
+description: A missing or ambiguous spec point. The agent stops the related work.
+title: "science: "
+labels:
+  - needs-science-decision
+body:
+  - type: textarea
+    id: spec_line
+    attributes:
+      label: Spec line
+      description: Quote the exact spec line, or name the heading that is still TODO(owner).
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Concrete options
+      description: List the options. Do not pick one.
+    validations:
+      required: true
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Work stopped
+      description: The engineering that stays blocked until the owner decides.
+    validations:
+      required: true

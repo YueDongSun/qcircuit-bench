@@ -1,0 +1,13 @@
+---
+description: spec/ and data/gold/ are owner-only
+alwaysApply: true
+---
+
+# Spec boundary
+
+- Do not edit `spec/` or `data/gold/`. Do not set `OWNER_SPEC_EDIT`.
+- Do not invent a convention, a tolerance, a unit, a basis order, or a physical constant.
+- If a spec point is missing or ambiguous, open a GitHub issue labelled `needs-science-decision`, quote the exact spec line, list the concrete options, and stop work on that piece.
+- Reading `spec/` is allowed. Quote the line you rely on.
+- Other behaviour must trace to a line in `spec/` or an ADR in `docs/adr/`.
+- `example_000_smoke` is a format demo, not a science result. `spec/` currently contains headings and `TODO(owner)` markers only.

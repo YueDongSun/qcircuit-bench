@@ -1,0 +1,16 @@
+---
+description: Python and task-code standard
+alwaysApply: true
+---
+
+# Code standard
+
+- Python 3.12+, `uv`, committed `uv.lock`. Do not leave a dependency unpinned. Add dependencies with `uv add`, not `pip install`.
+- Ruff rules: E, F, W, I, B, UP, SIM, RUF, N, PL. Line length 100. `mypy --strict` on `src/`.
+- `pytest --strict-markers`. Deterministic tests. Mark slow tests `@pytest.mark.slow`. Do not exclude slow tests from `make test`.
+- Type hints on `src/`. Docstrings name units and point at the spec section or ADR.
+- No broad `try/except`, no silent fallback, no speculative abstraction, no checksum manifest, no live or paid LLM call in tests.
+- No notebooks under `src/` or `tasks/`.
+- Do not add numpy, scipy, Qiskit, or Cirq until a filled spec section or an ADR requires them.
+- Task ids match `<family>_<nnn>_<slug>`. Numeric checks use a named tolerance from `spec/TOLERANCES.md`, never a hard-coded threshold. That file is still `TODO(owner)`.
+- `make validate` must show that the reference solution passes and that a do-nothing run fails.

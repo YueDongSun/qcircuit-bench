@@ -1,0 +1,53 @@
+[project]
+name = "qcbench"
+version = "0.0.0"
+description = "Execution-graded benchmark for quantum circuit design."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Yuedong Sun" }]
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "hatchling==1.33.0",
+  "mypy==2.4.1",
+  "nbstripout==0.9.1",
+  "pre-commit==4.7.0",
+  "pytest==9.2.0",
+  "ruff==0.17.4",
+]
+
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+default-groups = ["dev"]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "PL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["qcbench"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["qcbench"]
+
+[tool.pytest.ini_options]
+strict_markers = true
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+norecursedirs = ["*.egg", ".*", "build", "dist", "fixtures"]
+markers = [
+  "slow: marks tests that are slow; make test still runs them",
+]

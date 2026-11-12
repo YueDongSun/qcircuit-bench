@@ -1,0 +1,60 @@
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+        exclude: ^data/gold/
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4
+    hooks:
+      # ruff-check ships with --fix off. Do not pass --fix.
+      - id: ruff-format
+        types_or: [python, pyi]
+      - id: ruff-check
+        types_or: [python, pyi]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.4.1
+    hooks:
+      - id: mypy
+        args: ["--strict"]
+        files: ^src/
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+  - repo: local
+    hooks:
+      - id: check-spec-untouched
+        name: reject staged edits under spec/ and data/gold/
+        entry: python3 tools/check_spec_untouched.py
+        language: system
+        stages: [pre-commit]
+        always_run: true
+        pass_filenames: false
+      - id: check-gold-file-size
+        name: data/gold files stay within 5 MiB
+        entry: python3 tools/check_gold_file_size.py
+        language: system
+        stages: [pre-commit]
+        files: ^data/gold/
+      - id: conventional-commit
+        name: conventional commit with required scope
+        entry: python3 tools/check_commit_msg.py
+        language: system
+        stages: [commit-msg]
+        always_run: true
+      - id: pre-push-check
+        name: make check and refuse a push from main
+        entry: python3 -m tools.pre_push
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

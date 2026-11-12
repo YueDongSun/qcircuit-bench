@@ -1,0 +1,14 @@
+---
+description: Branches, commits, hooks, and pull requests
+alwaysApply: true
+---
+
+# Git, hooks, and pull requests
+
+- Do not commit on `main`. Do not merge. The owner squash-merges.
+- Commit subjects look like `chore(tooling): M0 scaffold`. Scopes: `task`, `verify`, `reference`, `taskfmt`, `tooling`, `docs`, `ci`, `deps`, `spec`.
+- One issue, one branch, one PR. Branch: `<agent>/<issue_number>_<slug>`. Comment `claim` and add `in-progress` before editing. Stay inside the issue's file scope.
+- Aim for under 400 changed lines excluding `data/` and lockfiles.
+- Rebase on `main` before review. Fill every section of the PR template, including spec anchors, contract changes, `make check` output, what is not verified, and open science questions. Update `PROGRESS.md` when status changes.
+- Hooks refuse force-push, push to `main`, `git commit --no-verify`, `git reset --hard` on `main` or a remote ref, `OWNER_SPEC_EDIT`, `pip install`, and edits under `spec/` or `data/gold/`.
+- `make setup` installs hooks. `make check` is the gate. Paste its output. Do not claim the hooks work without that output.
