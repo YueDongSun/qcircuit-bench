@@ -36,6 +36,7 @@ def install_pre_commit() -> None:
             "run",
             "pre-commit",
             "install",
+            "--overwrite",
             "--install-hooks",
             "--hook-type",
             "pre-commit",
