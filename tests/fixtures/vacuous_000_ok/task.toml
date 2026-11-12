@@ -1,0 +1,10 @@
+id = "vacuous_000_ok"
+family = "vacuous"
+difficulty = "demo"
+spec_reference = "spec/TASKS.md#task-families"
+author = "m0_scaffold"
+status = "draft"
+
+[timeouts]
+solve_sec = 60
+test_sec = 60

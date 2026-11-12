@@ -1,0 +1,5 @@
+# Last matching pattern wins. The owner reviews the whole repository, and
+# spec/ plus data/gold/ are called out because agents must not edit them.
+* @YueDongSun
+/spec/ @YueDongSun
+/data/gold/ @YueDongSun

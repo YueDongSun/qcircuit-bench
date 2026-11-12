@@ -1,0 +1,26 @@
+name: Bug
+description: A defect in engineering behaviour that already has a spec or ADR line.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: Point at the spec anchor or ADR that states it.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Commands and output. No tokens or private host names.
+    validations:
+      required: true

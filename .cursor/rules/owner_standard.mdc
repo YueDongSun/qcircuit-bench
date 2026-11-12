@@ -1,0 +1,18 @@
+---
+description: Owner workflow standard for qcircuit-bench
+alwaysApply: true
+---
+
+# Owner workflow standard
+
+This rule overrides default coding habits. The full contract is `AGENTS.md`.
+
+- Use snake_case for project-owned paths and identifiers (directories, modules, task ids, scripts, labels where possible).
+- Keep required external names as they are: `AGENTS.md`, `README.md`, `Dockerfile`, `pyproject.toml`, `task.toml`, `.pre-commit-config.yaml`, `.cursor/`, `.claude/`, GitHub template filenames, and the repository name.
+- Write code comments, docs, ADRs, and agent instructions in English.
+- Do not add attribution trailers to commits (`Co-authored-by`, `Generated-by`, "made with X").
+- One mutable owner per issue, branch, and worktree. Do not edit, rebase, or push another agent's branch. Preserve concurrent and unknown dirty work. Do not force-remove a worktree or a branch.
+- Keep preparation, installation, registration, a successful call, and end-to-end acceptance as separate states. Say which state a claim reached. Do not call a claim verified without the command output.
+- Do not commit credentials, host inventories, chat histories, tokens, or token-bearing URLs. Keep third-party licenses when vendoring.
+- Update `README.md` and affected docs in the same PR, and only with verified behaviour.
+- Leave repository visibility to the owner.
