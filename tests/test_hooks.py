@@ -37,20 +37,29 @@ DENY_COMMANDS = (
     "git push origin feature:main",
     "git push origin HEAD:refs/heads/main",
     "git commit --no-verify -m 'chore(tooling): x'",
+    "git commit '--no-verify' -m 'chore(tooling): x'",
+    'git commit "--no-verify" -m "chore(tooling): x"',
     "git commit -n -m 'chore(tooling): x'",
+    "git commit '-n' -m 'chore(tooling): x'",
+    'git commit "-n" -m "chore(tooling): x"',
+    "git push '--force' origin feature",
+    'git push "--force" origin feature',
+    "git push '-f' origin feature",
     "git -C /tmp commit --no-verify -m 'chore(tooling): x'",
     "OWNER_SPEC_EDIT=1 git status",
     "pip install numpy",
     "pip3 install numpy",
     "python -m pip install numpy",
     "python3 -m pip install numpy",
+    "uv pip install numpy",
 )
 ALLOW_COMMANDS = (
     "git status",
     "git push -u origin cursor/m0_scaffold",
     "git commit -m 'chore(tooling): M0 scaffold'",
     "uv add numpy",
-    "uv pip install numpy",
+    "git commit -m 'do not pass --no-verify or --force or -n'",
+    'git commit -m "uv pip install stays in the message"',
     "make check",
     "git reset --hard",
     "git reset --hard HEAD~1",
@@ -107,6 +116,25 @@ def test_reset_hard_on_main_is_refused() -> None:
 def test_reset_hard_on_origin_ref_is_refused() -> None:
     reason = shell_denial("git reset --hard origin/main", current_branch="cursor/m0_scaffold")
     assert reason is not None
+
+
+def test_cursor_and_claude_deny_quoted_no_verify_and_uv_pip() -> None:
+    commands = (
+        "git commit '--no-verify' -m 'chore(tooling): x'",
+        "uv pip install numpy",
+    )
+    for command in commands:
+        cursor = _run_module(
+            "tools.hooks.cursor_before_shell",
+            {"command": command, "cwd": str(ROOT)},
+        )
+        claude = _run_module(
+            "tools.hooks.claude_pre_tool",
+            {"tool_name": "Bash", "cwd": str(ROOT), "tool_input": {"command": command}},
+        )
+        assert json.loads(cursor.stdout)["permission"] == "deny"
+        decision = json.loads(claude.stdout)["hookSpecificOutput"]["permissionDecision"]
+        assert decision == "deny"
 
 
 def test_cursor_and_claude_share_force_push_denial() -> None:

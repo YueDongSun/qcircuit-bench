@@ -1,10 +1,12 @@
 """Decisions shared by the Cursor and Claude Code hooks.
 
-See ``docs/adr/0003-tooling.md`` and ``AGENTS.md``. Shell denials match the
-command text. They do not try to fully parse shell quoting.
+See ``docs/adr/0003-tooling.md`` and ``AGENTS.md``. Shell segments are split
+with ``shlex`` so a quoted flag is a flag, and a commit message that merely
+mentions a flag is not.
 """
 
 import re
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -15,15 +17,13 @@ OWNER_ONLY_MESSAGE = (
 )
 KEEP_WORKING = "make check failed. Keep working until it passes."
 
-_FORCE = re.compile(r"(?:^|\s)(?:--force(?:-with-lease|-if-includes)?(?:=|\s|$)|-f(?:=|\s|$))")
-_GIT_PUSH = re.compile(r"\bgit(?:\s+-C\s+\S+)?\s+push\b")
-_GIT_RESET_HARD = re.compile(r"\bgit(?:\s+-C\s+\S+)?\s+reset\s+--hard\b")
-_GIT_COMMIT = re.compile(r"\bgit(?:\s+-C\s+\S+)?\s+commit\b")
-_NO_VERIFY = re.compile(r"(?:^|\s)--no-verify(?:=|\s|$)")
-_SHORT_NO_VERIFY = re.compile(r"(?:^|\s)-n(?:=|\s|$)")
-_PIP_INSTALL = re.compile(r"(?:^|[\s;&|`(])(?:python3?\s+-m\s+)?pip3?\s+install\b")
-_UV_PIP_INSTALL = re.compile(r"\buv\s+pip\s+install\b")
 _OWNER_SPEC = re.compile(r"OWNER_SPEC_EDIT\s*=")
+_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_GIT_GLOBAL_WITH_VALUE = frozenset(
+    {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env"}
+)
+_COMMIT_MESSAGE_OPTIONS = frozenset({"-m", "--message"})
+_FORCE_FLAGS = frozenset({"-f", "--force", "--force-with-lease", "--force-if-includes"})
 _MAIN_REFS = frozenset({"main", "refs/heads/main"})
 _DATA_GOLD_PARTS = 2
 _MIN_PUSH_FIELDS = 3
@@ -37,10 +37,14 @@ def shell_denial(command: str, *, current_branch: str) -> str | None:
             "OWNER_SPEC_EDIT is reserved for the owner. "
             "Agents must not set it. Open a needs-science-decision issue instead."
         )
-    if _pip_install(command):
-        return "pip install is refused. Add dependencies with uv add."
     for segment in re.split(r"&&|\|\||;|\n", command):
-        denial = _git_denial(segment, current_branch=current_branch)
+        if not segment.strip():
+            continue
+        try:
+            tokens = shlex.split(segment, posix=True)
+        except ValueError:
+            return "shell command could not be parsed"
+        denial = _segment_denial(_strip_assignments(tokens), current_branch=current_branch)
         if denial is not None:
             return denial
     return None
@@ -181,31 +185,105 @@ def push_targets_main(stdin_text: str, current_branch: str) -> bool:
     return False
 
 
-def _pip_install(command: str) -> bool:
-    scrubbed = _UV_PIP_INSTALL.sub("", command)
-    return _PIP_INSTALL.search(scrubbed) is not None
+def _strip_assignments(tokens: list[str]) -> list[str]:
+    index = 0
+    while index < len(tokens) and _ASSIGNMENT.match(tokens[index]):
+        index += 1
+    return tokens[index:]
 
 
-def _git_denial(segment: str, *, current_branch: str) -> str | None:
-    if _GIT_PUSH.search(segment):
-        if _FORCE.search(segment):
-            return "git push --force is refused"
-        if _push_ref_is_main(segment):
-            return "git push to main is refused"
-    if _GIT_COMMIT.search(segment) and (
-        _NO_VERIFY.search(segment) or _SHORT_NO_VERIFY.search(segment)
-    ):
+def _segment_denial(tokens: list[str], *, current_branch: str) -> str | None:
+    pip_denial = _pip_denial(tokens)
+    if pip_denial is not None:
+        return pip_denial
+    parsed = _git_command(tokens)
+    if parsed is None:
+        return None
+    subcommand, args = parsed
+    if subcommand == "push":
+        return _push_denial(args)
+    if subcommand == "commit" and _commit_skips_verify(args):
         return "git commit --no-verify is refused"
-    if _GIT_RESET_HARD.search(segment):
-        return _reset_hard_denial(segment, current_branch=current_branch)
+    if subcommand == "reset":
+        return _reset_hard_denial(args, current_branch=current_branch)
     return None
 
 
-def _push_ref_is_main(segment: str) -> bool:
-    match = _GIT_PUSH.search(segment)
-    if match is None:
-        return False
-    for token in segment[match.end() :].split():
+def _push_denial(args: list[str]) -> str | None:
+    if _has_force_flag(args):
+        return "git push --force is refused"
+    if _push_ref_is_main(args):
+        return "git push to main is refused"
+    return None
+
+
+def _pip_denial(tokens: list[str]) -> str | None:
+    if (
+        len(tokens) >= _MIN_PUSH_FIELDS
+        and tokens[0] == "uv"
+        and tokens[1] == "pip"
+        and tokens[2] == "install"
+    ):
+        return "uv pip install is refused. Add dependencies with uv add."
+    if len(tokens) >= _DATA_GOLD_PARTS and tokens[0] in {"pip", "pip3"} and tokens[1] == "install":
+        return "pip install is refused. Add dependencies with uv add."
+    python_module = 4
+    if (
+        len(tokens) >= python_module
+        and tokens[0] in {"python", "python3"}
+        and tokens[1] == "-m"
+        and tokens[2] in {"pip", "pip3"}
+        and tokens[3] == "install"
+    ):
+        return "pip install is refused. Add dependencies with uv add."
+    return None
+
+
+def _git_command(tokens: list[str]) -> tuple[str, list[str]] | None:
+    if not tokens or (tokens[0] != "git" and not tokens[0].endswith("/git")):
+        return None
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _GIT_GLOBAL_WITH_VALUE:
+            index += _DATA_GOLD_PARTS
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token, tokens[index + 1 :]
+    return None
+
+
+def _commit_skips_verify(args: list[str]) -> bool:
+    index = 0
+    while index < len(args):
+        token = args[index]
+        if token in _COMMIT_MESSAGE_OPTIONS or token.startswith("--message="):
+            index += _DATA_GOLD_PARTS if token in _COMMIT_MESSAGE_OPTIONS else 1
+            continue
+        if token in {"--no-verify", "-n"} or token.startswith("--no-verify="):
+            return True
+        index += 1
+    return False
+
+
+def _has_force_flag(args: list[str]) -> bool:
+    for token in args:
+        if token in _FORCE_FLAGS:
+            return True
+        if (
+            token.startswith("-f=")
+            or token.startswith("--force=")
+            or token.startswith("--force-with-lease=")
+            or token.startswith("--force-if-includes=")
+        ):
+            return True
+    return False
+
+
+def _push_ref_is_main(args: list[str]) -> bool:
+    for token in args:
         if token.startswith("-"):
             continue
         if token.split(":")[-1] in _MAIN_REFS:
@@ -213,9 +291,11 @@ def _push_ref_is_main(segment: str) -> bool:
     return False
 
 
-def _reset_hard_denial(segment: str, *, current_branch: str) -> str | None:
+def _reset_hard_denial(args: list[str], *, current_branch: str) -> str | None:
+    if "--hard" not in args:
+        return None
     if current_branch == "main":
         return "git reset --hard on main is refused"
-    if re.search(r"\borigin/", segment) or "main" in segment.split():
+    if any(token == "main" or "origin/" in token for token in args):
         return "git reset --hard on a shared ref is refused"
     return None

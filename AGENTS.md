@@ -109,7 +109,7 @@ Cursor (`.cursor/hooks.json`) and Claude Code (`.claude/settings.json`) deny:
 - `git reset --hard` when the current branch is `main` or the command targets
   `main` or any `origin/` ref
 - any command that sets `OWNER_SPEC_EDIT`
-- `pip install` (add dependencies with `uv add`; `uv pip install` is allowed)
+- `pip install` and `uv pip install` (add dependencies with `uv add`)
 
 Edits under `spec/` or `data/gold/` are denied before the write: Cursor
 `preToolUse` and Claude Code `PreToolUse`. The message points at the
